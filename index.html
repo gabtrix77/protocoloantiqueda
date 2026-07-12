@@ -30,6 +30,15 @@
     document.head.appendChild(a);
   </script>
 
+  <!-- ───── Utmify UTMs (captura os parâmetros da campanha e repassa ao checkout) ───── -->
+  <script
+    src="https://cdn.utmify.com.br/scripts/utms/latest.js"
+    data-utmify-prevent-xcod-sck
+    data-utmify-prevent-subids
+    async
+    defer
+  ></script>
+
   <!-- ───── Meta Pixel (Facebook) — não precisa mexer aqui ───── -->
   <script type="text/javascript">
     !function(f,b,e,v,n,t,s)
@@ -2083,6 +2092,16 @@
         quizStarted = true;
         window.quizTrack('StartQuiz', {}, true); // evento customizado
       }
+
+      // Funil por etapa: Quiz_P1..Quiz_P10 e Quiz_SP1/SP2 (1x cada, sem duplicar no voltar)
+      if (!window.__stepsTracked) window.__stepsTracked = {};
+      var stepKey = (typeof n === 'number' && n >= 1 && n <= 10) ? 'Quiz_P' + n
+                  : (n === 'sp1') ? 'Quiz_SP1'
+                  : (n === 'sp2') ? 'Quiz_SP2' : null;
+      if (stepKey && !window.__stepsTracked[stepKey]) {
+        window.__stepsTracked[stepKey] = true;
+        window.quizTrack(stepKey, {}, true);
+      }
       if (n === 11 && !quizCompleted) {
         quizCompleted = true;
         window.quizTrack('Lead', { content_name: 'Quiz Diagnóstico Capilar' }); // quiz concluído
@@ -2094,6 +2113,7 @@
           currency: 'BRL'
         });
         armBackTrap(); // prepara a captura do botão "voltar" para o downsell
+        salesShownAt = Date.now();
       }
 
       if (n === 11) startLoader();
@@ -2269,8 +2289,10 @@
     // ═════════ DOWNSELL — oferta de resgate (R$ 17) ═════════
     var downsellShown = false;
 
+    var salesShownAt = 0;
     function showDownsell() {
       if (downsellShown || currentStep !== 12) return;
+      if (Date.now() - salesShownAt < 4000) return; // carência de 4s após abrir a página de vendas
       downsellShown = true;
       window.goToStep(13);
       startDownsellTimer();
@@ -2294,10 +2316,13 @@
       });
     }
 
-    // Gatilho 1 — Exit intent no DESKTOP (mouse sai pelo topo da janela)
-    document.addEventListener('mouseout', function(e) {
-      if (!e.relatedTarget && e.clientY <= 0) showDownsell();
-    });
+    // Gatilho 1 — Exit intent SÓ no desktop com mouse real
+    // (no celular, toques geram eventos de mouse "fantasmas" que disparavam o downsell sem querer)
+    if (window.matchMedia('(hover: hover) and (pointer: fine)').matches) {
+      document.addEventListener('mouseout', function(e) {
+        if (!e.relatedTarget && e.clientY <= 0) showDownsell();
+      });
+    }
 
     // Gatilho 2 — Botão VOLTAR no celular (intercepta o abandono)
     var trapArmed = false;
