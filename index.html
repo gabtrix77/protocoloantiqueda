@@ -68,6 +68,24 @@
         fbq(custom ? 'trackCustom' : 'track', event, params || {});
       } catch (e) { /* nunca quebra o funil por causa de tracking */ }
     };
+
+    // ───── Analytics interno (painel /admin.html) — falha em silêncio ─────
+    window.__ftSent = {};
+    window.funnelTrack = function(type, key, dedupKey) {
+      try {
+        var dk = dedupKey || (type + ':' + key);
+        if (window.__ftSent[dk]) return;
+        window.__ftSent[dk] = 1;
+        var body = JSON.stringify({ e: [{ t: type, k: String(key) }] });
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon('/api/track', new Blob([body], { type: 'application/json' }));
+        } else {
+          fetch('/api/track', { method: 'POST', body: body, keepalive: true,
+            headers: { 'Content-Type': 'application/json' } }).catch(function(){});
+        }
+      } catch (e) { /* nunca quebra o funil */ }
+    };
+    window.funnelTrack('visit', '1');
   </script>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2418,9 +2436,12 @@
         window.__stepsTracked[stepKey] = true;
         window.quizTrack(stepKey, {}, true);
       }
+      // Analytics interno por etapa
+      if (typeof n === 'number' && n >= 1 && n <= 10) window.funnelTrack('step', 'p' + n);
       if (n === 11 && !quizCompleted) {
         quizCompleted = true;
         window.quizTrack('Lead', { content_name: 'Quiz Diagnóstico Capilar' }); // quiz concluído
+        window.funnelTrack('step', 'lead');
       }
       if (n === 12) {
         window.quizTrack('ViewContent', {
@@ -2428,9 +2449,11 @@
           value: 27.00,
           currency: 'BRL'
         });
+        window.funnelTrack('step', 'sales');
         armBackTrap(); // prepara a captura do botão "voltar" para o downsell
         salesShownAt = Date.now();
       }
+      if (n === 13) window.funnelTrack('step', 'downsell');
 
       if (n === 11) startLoader();
       if (n === 12) renderDiagnostic();
@@ -2456,6 +2479,7 @@
         var q = parseInt(btn.dataset.q, 10);
         var value = btn.dataset.value;
         answers[q] = value;
+        window.funnelTrack('ans', q + '_' + value, 'ansq:' + q); // 1ª resposta de cada pergunta
 
         // feedback visual
         var siblings = btn.parentElement.querySelectorAll('.option');
@@ -2497,6 +2521,12 @@
         }
 
         step7Next.disabled = (answers[7].length === 0);
+      });
+    });
+    // Analytics: envia as opções da P7 (múltipla escolha) ao continuar
+    if (step7Next) step7Next.addEventListener('click', function() {
+      (answers[7] || []).forEach(function(v) {
+        window.funnelTrack('ans', '7_' + v, 'ansq:7_' + v);
       });
     });
 
@@ -2671,6 +2701,8 @@
           value: 27.00,
           currency: 'BRL'
         });
+        window.funnelTrack('cta', link.dataset.cta);
+        window.funnelTrack('step', 'checkout', 'step:checkout');
       });
     });
 
@@ -2701,6 +2733,8 @@
           value: 17.00,
           currency: 'BRL'
         });
+        window.funnelTrack('cta', 'downsell');
+        window.funnelTrack('step', 'checkout', 'step:checkout');
       });
     }
 

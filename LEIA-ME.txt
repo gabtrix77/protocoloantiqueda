@@ -1,0 +1,38 @@
+PAINEL DO FUNIL — COMO ATIVAR (5 minutos, uma vez só)
+======================================================
+
+O projeto agora tem:
+  index.html   -> o quiz (já envia os eventos sozinho)
+  admin.html   -> o painel (abra em seudominio.vercel.app/admin.html)
+  api/         -> as duas funções que gravam e leem os dados
+
+PASSO A PASSO NA VERCEL:
+
+1) Suba o projeto INTEIRO (a pasta com index.html, admin.html e api/)
+   no mesmo projeto de sempre da Vercel.
+
+2) Criar o banco (grátis):
+   - Abra o projeto na Vercel -> aba "Storage"
+   - "Create Database" -> escolha "Upstash for Redis" (plano Free)
+   - Clique em "Connect Project" e escolha esse projeto
+   (isso cria as variáveis do banco automaticamente)
+
+3) Criar a senha do painel:
+   - Projeto -> Settings -> Environment Variables
+   - Name:  ADMIN_PASSWORD
+   - Value: a senha que você quiser
+   - Save
+
+4) Aba "Deployments" -> menu (...) do último deploy -> "Redeploy"
+
+PRONTO. Acesse:  https://SEU-PROJETO.vercel.app/admin.html
+
+OBSERVAÇÕES:
+- O painel mostra: funil etapa a etapa, o maior vazamento,
+  o que o público responde em cada pergunta e qual botão de
+  compra converte mais. Filtros: Hoje / 7 / 30 / 90 dias.
+- Nenhum dado pessoal é gravado (só contadores por dia).
+- Se o painel mostrar instruções de configuração, é porque
+  faltou o passo 2 ou 3.
+- O quiz continua funcionando normalmente mesmo se o banco
+  não estiver configurado (o rastreamento falha em silêncio).

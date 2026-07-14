@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Painel do Funil — Quiz Capilar</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --baseline: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --bar: #2a78d6;
+    --bar-soft: rgba(42,120,214,0.14);
+    --good: #006300;
+    --critical: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --page: #0d0d0d;
+      --surface: #1a1a19;
+      --ink: #ffffff;
+      --ink-2: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --baseline: #383835;
+      --border: rgba(255,255,255,0.10);
+      --bar: #3987e5;
+      --bar-soft: rgba(57,135,229,0.18);
+      --good: #0ca30c;
+      --critical: #d03b3b;
+    }
+  }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 24px 16px 64px;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; }
+
+  /* ── Login ── */
+  .login {
+    max-width: 360px; margin: 12vh auto 0; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 14px; padding: 28px;
+  }
+  .login h1 { font-size: 18px; margin-bottom: 4px; }
+  .login p { font-size: 13px; color: var(--ink-2); margin-bottom: 16px; }
+  .login input {
+    width: 100%; padding: 10px 12px; font-size: 15px; border-radius: 8px;
+    border: 1px solid var(--baseline); background: var(--page); color: var(--ink);
+    margin-bottom: 10px;
+  }
+  .login button {
+    width: 100%; padding: 10px; font-size: 14px; font-weight: 700; cursor: pointer;
+    background: var(--bar); color: #fff; border: none; border-radius: 8px;
+  }
+  .login .err { color: var(--critical); font-size: 13px; margin-top: 10px; display: none; }
+
+  /* ── Header + filtros ── */
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  header h1 { font-size: 20px; }
+  header .sub { font-size: 13px; color: var(--ink-2); margin-top: 2px; }
+  .filters { display: flex; gap: 6px; align-items: center; }
+  .filters button {
+    font-size: 13px; font-weight: 600; padding: 7px 13px; cursor: pointer;
+    background: var(--surface); color: var(--ink-2);
+    border: 1px solid var(--border); border-radius: 999px;
+  }
+  .filters button.active { color: var(--ink); border-color: var(--bar); background: var(--bar-soft); font-weight: 700; }
+  .filters .refresh { font-size: 15px; }
+
+  /* ── KPI tiles ── */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 24px; }
+  .tile {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .tile .lbl { font-size: 12px; font-weight: 600; color: var(--ink-2); margin-bottom: 6px; }
+  .tile .val { font-size: 26px; font-weight: 800; line-height: 1; }
+  .tile .pct { font-size: 12px; color: var(--muted); margin-top: 5px; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 20px; margin-bottom: 20px;
+  }
+  .card h2 { font-size: 15px; margin-bottom: 2px; }
+  .card .desc { font-size: 12.5px; color: var(--muted); margin-bottom: 16px; }
+
+  /* ── Funil ── */
+  .frow { display: grid; grid-template-columns: 150px 1fr 118px; gap: 10px; align-items: center; padding: 4px 0; }
+  .frow .lbl { font-size: 13px; color: var(--ink-2); text-align: right; }
+  .frow .lbl strong { color: var(--ink); font-weight: 700; }
+  .ftrack { position: relative; height: 18px; background: transparent; border-left: 2px solid var(--baseline); }
+  .fbar {
+    height: 14px; margin-top: 2px; background: var(--bar);
+    border-radius: 0 4px 4px 0; min-width: 2px;
+    transition: width 0.4s ease;
+  }
+  .frow .num { font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .frow .num strong { color: var(--ink); }
+  .frow .drop { color: var(--critical); font-weight: 700; }
+  .alerta {
+    display: flex; gap: 8px; align-items: flex-start; margin-top: 14px; padding: 11px 13px;
+    border: 1px solid var(--critical); border-radius: 10px; font-size: 13px; color: var(--ink-2);
+    background: transparent;
+  }
+  .alerta .ic { color: var(--critical); font-weight: 900; }
+  .alerta strong { color: var(--ink); }
+
+  /* ── Respostas ── */
+  .qgrid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  @media (min-width: 720px) { .qgrid { grid-template-columns: 1fr 1fr; } }
+  .qcard { border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .qcard h3 { font-size: 13.5px; margin-bottom: 12px; }
+  .arow { display: grid; grid-template-columns: minmax(110px, 42%) 1fr 64px; gap: 8px; align-items: center; padding: 3px 0; }
+  .arow .albl { font-size: 12px; color: var(--ink-2); line-height: 1.3; }
+  .abar-track { height: 12px; border-left: 2px solid var(--baseline); }
+  .abar { height: 12px; background: var(--bar); border-radius: 0 4px 4px 0; min-width: 2px; transition: width 0.4s ease; }
+  .arow .anum { font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  .arow .anum strong { color: var(--ink); }
+  .arow.top .albl, .arow.top .anum strong { font-weight: 700; color: var(--ink); }
+
+  /* ── Estados ── */
+  .empty { text-align: center; color: var(--muted); font-size: 14px; padding: 40px 0; }
+  .setup { border: 1px solid var(--baseline); border-radius: 12px; padding: 18px; font-size: 14px; line-height: 1.7; color: var(--ink-2); }
+  .setup strong { color: var(--ink); }
+  .setup code { background: var(--bar-soft); padding: 1px 6px; border-radius: 5px; font-size: 13px; }
+
+  /* ── Tooltip ── */
+  #tip {
+    position: fixed; pointer-events: none; z-index: 50; display: none;
+    background: var(--ink); color: var(--page); font-size: 12px; font-weight: 600;
+    padding: 6px 10px; border-radius: 7px; max-width: 260px;
+  }
+  #painel { display: none; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- LOGIN -->
+  <div class="login" id="login">
+    <h1>🔒 Painel do Funil</h1>
+    <p>Digite a senha de administrador.</p>
+    <input type="password" id="pass" placeholder="Senha" autocomplete="current-password">
+    <button onclick="entrar()">Entrar</button>
+    <p class="err" id="loginErr">Senha incorreta.</p>
+    <div class="setup" id="setupMsg" style="display:none; margin-top:14px;"></div>
+  </div>
+
+  <!-- PAINEL -->
+  <div id="painel">
+    <header>
+      <div>
+        <h1>Funil — Quiz Capilar</h1>
+        <p class="sub" id="periodo"></p>
+      </div>
+      <div class="filters">
+        <button data-d="1">Hoje</button>
+        <button data-d="7" class="active">7 dias</button>
+        <button data-d="30">30 dias</button>
+        <button data-d="90">Tudo</button>
+        <button class="refresh" onclick="carregar()" title="Atualizar">↻</button>
+      </div>
+    </header>
+
+    <div class="tiles" id="tiles"></div>
+
+    <div class="card">
+      <h2>Funil etapa a etapa</h2>
+      <p class="desc">Quantas pessoas chegaram em cada ponto. A % à direita compara com a etapa anterior — quedas grandes mostram onde o funil vaza.</p>
+      <div id="funil"></div>
+      <div class="alerta" id="alerta" style="display:none;"></div>
+    </div>
+
+    <div class="card">
+      <h2>O que seu público responde</h2>
+      <p class="desc">Distribuição de cliques por pergunta (1ª resposta de cada visitante). A resposta mais comum de cada pergunta está em negrito — é a dor do seu público, use nos criativos.</p>
+      <div class="qgrid" id="answers"></div>
+    </div>
+
+    <div class="card">
+      <h2>Cliques por botão de compra</h2>
+      <p class="desc">Qual CTA está levando as pessoas pro checkout.</p>
+      <div id="ctas"></div>
+    </div>
+  </div>
+</div>
+
+<div id="tip"></div>
+
+<script>
+// ───── Mapa de perguntas e respostas (labels do quiz) ─────
+const PERGUNTAS = {
+  1:  { t: 'P1 · Gênero', o: { female: 'Mulher', male: 'Homem' } },
+  2:  { t: 'P2 · Faixa etária', o: { '18-29': '18 a 29', '30-39': '30 a 39', '40-49': '40 a 49', '50+': '50 ou mais' } },
+  3:  { t: 'P3 · Há quanto tempo nota a queda', o: { '<3m': 'Menos de 3 meses', '3-6m': '3 a 6 meses', '6-12m': '6 meses a 1 ano', '>1y': 'Mais de 1 ano' } },
+  4:  { t: 'P4 · Padrão da queda', o: { diffuse: 'Difusa (todo o couro)', crown: 'Coroa / topo', frontal: 'Entradas / frontal', patches: 'Falhas circulares' } },
+  5:  { t: 'P5 · Fios perdidos por dia', o: { '<50': 'Até 50', '50-100': '50 a 100', '100-200': '100 a 200', '>200': 'Mais de 200' } },
+  6:  { t: 'P6 · Calvície na família', o: { parents: 'Pai ou mãe', grandparents: 'Avós ou tios', no: 'Não', unsure: 'Não sabe' } },
+  7:  { t: 'P7 · Situações nos últimos 12 meses', o: { stress: 'Estresse / ansiedade', pregnancy: 'Parto / pós-parto', hormonal: 'Mudança hormonal', surgery: 'Cirurgia / doença', weightloss: 'Perda de peso rápida', none: 'Nenhuma' } },
+  8:  { t: 'P8 · Frequência de química', o: { never: 'Nunca', rare: 'Eventualmente', regular: '1-2x por mês', frequent: 'Toda semana' } },
+  9:  { t: 'P9 · Sono e alimentação', o: { good: 'Equilibrada', fair: 'Razoável', poor: 'Desregulada', bad: 'Muito ruim' } },
+  10: { t: 'P10 · Já tentou tratamento', o: { many: 'Vários, sem resultado', few: 'Um ou dois, sem resultado', none: 'Nunca tentou', shampoo: 'Só shampoo comum' } }
+};
+
+const ETAPAS = [
+  { k: 'visit:1',    lbl: 'Visitas na página' },
+  { k: 'step:p2',    lbl: 'Começou o quiz' },
+  { k: 'step:p3',    lbl: 'Pergunta 3' },
+  { k: 'step:p4',    lbl: 'Pergunta 4' },
+  { k: 'step:p5',    lbl: 'Pergunta 5' },
+  { k: 'step:p6',    lbl: 'Pergunta 6' },
+  { k: 'step:p7',    lbl: 'Pergunta 7' },
+  { k: 'step:p8',    lbl: 'Pergunta 8' },
+  { k: 'step:p9',    lbl: 'Pergunta 9' },
+  { k: 'step:p10',   lbl: 'Pergunta 10' },
+  { k: 'step:lead',  lbl: 'Concluiu o quiz' },
+  { k: 'step:sales', lbl: 'Viu a oferta' },
+  { k: 'step:checkout', lbl: 'Foi pro checkout' }
+];
+
+const CTAS = {
+  main: 'Botão principal (oferta)', sticky: 'Barra fixa do rodapé',
+  'path-win': 'Caminho 1 (dois caminhos)', final: 'Última chance (fim da página)',
+  downsell: 'Downsell R$ 17'
+};
+
+let dias = 7;
+const $ = id => document.getElementById(id);
+const senha = () => localStorage.getItem('fq_pass') || '';
+const fmt = n => (n || 0).toLocaleString('pt-BR');
+const pct = (a, b) => b > 0 ? Math.round(a / b * 100) : 0;
+
+// ───── Login ─────
+function entrar() {
+  localStorage.setItem('fq_pass', $('pass').value);
+  carregar();
+}
+$('pass').addEventListener('keydown', e => { if (e.key === 'Enter') entrar(); });
+
+// ───── Filtros ─────
+document.querySelectorAll('.filters button[data-d]').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.filters button[data-d]').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    dias = parseInt(b.dataset.d, 10);
+    carregar();
+  });
+});
+
+// ───── Tooltip ─────
+const tip = $('tip');
+function bindTip(el, texto) {
+  el.addEventListener('mousemove', e => {
+    tip.style.display = 'block';
+    tip.textContent = texto;
+    tip.style.left = Math.min(e.clientX + 14, window.innerWidth - 270) + 'px';
+    tip.style.top = (e.clientY + 14) + 'px';
+  });
+  el.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+}
+
+// ───── Carrega e desenha ─────
+async function carregar() {
+  if (!senha()) return;
+  let r, j;
+  try {
+    r = await fetch('/api/stats?p=' + encodeURIComponent(senha()) + '&days=' + dias);
+    j = await r.json();
+  } catch (e) {
+    $('setupMsg').style.display = 'block';
+    $('setupMsg').innerHTML = 'Não consegui falar com <code>/api/stats</code>. O painel só funciona publicado na Vercel (não abre local).';
+    return;
+  }
+  if (r.status === 401) {
+    $('login').style.display = 'block'; $('painel').style.display = 'none';
+    $('loginErr').style.display = 'block';
+    return;
+  }
+  if (r.status === 500) {
+    $('login').style.display = 'block'; $('painel').style.display = 'none';
+    $('setupMsg').style.display = 'block';
+    $('setupMsg').innerHTML = '<strong>Falta configurar:</strong><br>' + (j.msg || '') +
+      '<br><br><strong>Passo a passo na Vercel:</strong><br>' +
+      '1. Projeto → aba <code>Storage</code> → Create Database → <strong>Upstash for Redis</strong> (free) → Connect Project.<br>' +
+      '2. Projeto → <code>Settings</code> → <code>Environment Variables</code> → crie <code>ADMIN_PASSWORD</code> com a senha que você quiser.<br>' +
+      '3. Aba <code>Deployments</code> → Redeploy. Pronto.';
+    return;
+  }
+
+  $('login').style.display = 'none';
+  $('painel').style.display = 'block';
+  $('loginErr').style.display = 'none';
+  desenhar(j.totals || {});
+  $('periodo').textContent = dias === 1 ? 'Hoje' : 'Últimos ' + dias + ' dias' + ' · atualizado ' + new Date().toLocaleTimeString('pt-BR').slice(0, 5);
+}
+
+function desenhar(t) {
+  const g = k => t[k] || 0;
+  const visitas = g('visit:1'), inicio = g('step:p2'), lead = g('step:lead'),
+        oferta = g('step:sales'), checkout = g('step:checkout'), ds = g('step:downsell');
+
+  // KPIs
+  $('tiles').innerHTML = [
+    ['Visitas', fmt(visitas), ''],
+    ['Começaram o quiz', fmt(inicio), pct(inicio, visitas) + '% das visitas'],
+    ['Concluíram', fmt(lead), pct(lead, inicio) + '% de quem começou'],
+    ['Viram a oferta', fmt(oferta), pct(oferta, visitas) + '% das visitas'],
+    ['Foram pro checkout', fmt(checkout), pct(checkout, oferta) + '% de quem viu a oferta'],
+    ['Viram o downsell', fmt(ds), '']
+  ].map(([l, v, p]) =>
+    `<div class="tile"><div class="lbl">${l}</div><div class="val">${v}</div><div class="pct">${p}</div></div>`
+  ).join('');
+
+  // Funil
+  if (!visitas) {
+    $('funil').innerHTML = '<div class="empty">Ainda sem dados no período. Assim que alguém abrir o quiz publicado, os números aparecem aqui.</div>';
+    $('alerta').style.display = 'none';
+  } else {
+    let html = '', piorQueda = { pct: 0 };
+    ETAPAS.forEach((et, i) => {
+      const v = g(et.k);
+      const ant = i === 0 ? v : g(ETAPAS[i - 1].k);
+      const w = visitas ? Math.max(v / visitas * 100, 0.5) : 0;
+      const rel = i === 0 ? 100 : pct(v, ant);
+      const quedaPct = 100 - rel;
+      if (i > 0 && ant >= 5 && quedaPct > piorQueda.pct) {
+        piorQueda = { pct: quedaPct, de: ETAPAS[i - 1].lbl, para: et.lbl, ant, v };
+      }
+      const dropCls = (i > 0 && rel < 60 && ant >= 5) ? 'drop' : '';
+      html += `<div class="frow">
+        <div class="lbl"><strong>${et.lbl}</strong></div>
+        <div class="ftrack"><div class="fbar" data-tip="${et.lbl}: ${fmt(v)} pessoas · ${pct(v, visitas)}% das visitas" style="width:${w}%"></div></div>
+        <div class="num"><strong>${fmt(v)}</strong> · <span class="${dropCls}">${i === 0 ? '100%' : rel + '%'}</span></div>
+      </div>`;
+    });
+    $('funil').innerHTML = html;
+    document.querySelectorAll('.fbar').forEach(b => bindTip(b, b.dataset.tip));
+
+    if (piorQueda.pct > 0) {
+      $('alerta').style.display = 'flex';
+      $('alerta').innerHTML = `<span class="ic">⚠</span><span><strong>Maior vazamento:</strong> de "${piorQueda.de}" pra "${piorQueda.para}" você perde <strong>${piorQueda.pct}%</strong> (${fmt(piorQueda.ant)} → ${fmt(piorQueda.v)}). Comece a otimizar por aqui.</span>`;
+    } else {
+      $('alerta').style.display = 'none';
+    }
+  }
+
+  // Respostas por pergunta
+  let ansHtml = '';
+  Object.keys(PERGUNTAS).forEach(q => {
+    const P = PERGUNTAS[q];
+    const rows = Object.keys(P.o).map(v => ({ v, lbl: P.o[v], n: g('ans:' + q + '_' + v) }));
+    const tot = rows.reduce((s, r) => s + r.n, 0);
+    if (!tot) return;
+    const max = Math.max(...rows.map(r => r.n));
+    rows.sort((a, b) => b.n - a.n);
+    ansHtml += `<div class="qcard"><h3>${P.t}</h3>` + rows.map(r =>
+      `<div class="arow ${r.n === max && r.n > 0 ? 'top' : ''}">
+        <div class="albl">${r.lbl}</div>
+        <div class="abar-track"><div class="abar" data-tip="${r.lbl}: ${fmt(r.n)} cliques · ${pct(r.n, tot)}%" style="width:${max ? Math.max(r.n / max * 100, 1.5) : 0}%"></div></div>
+        <div class="anum"><strong>${fmt(r.n)}</strong> · ${pct(r.n, tot)}%</div>
+      </div>`).join('') + '</div>';
+  });
+  $('answers').innerHTML = ansHtml || '<div class="empty">Sem respostas registradas no período.</div>';
+  document.querySelectorAll('.abar').forEach(b => bindTip(b, b.dataset.tip));
+
+  // CTAs
+  const ctaRows = Object.keys(CTAS).map(k => ({ lbl: CTAS[k], n: g('cta:' + k) })).filter(r => r.n > 0).sort((a, b) => b.n - a.n);
+  if (!ctaRows.length) {
+    $('ctas').innerHTML = '<div class="empty">Nenhum clique de compra registrado no período.</div>';
+  } else {
+    const max = Math.max(...ctaRows.map(r => r.n));
+    const tot = ctaRows.reduce((s, r) => s + r.n, 0);
+    $('ctas').innerHTML = ctaRows.map(r =>
+      `<div class="arow${r.n === max ? ' top' : ''}" style="grid-template-columns: minmax(150px, 34%) 1fr 64px;">
+        <div class="albl">${r.lbl}</div>
+        <div class="abar-track"><div class="abar" data-tip="${r.lbl}: ${fmt(r.n)} cliques" style="width:${Math.max(r.n / max * 100, 1.5)}%"></div></div>
+        <div class="anum"><strong>${fmt(r.n)}</strong> · ${pct(r.n, tot)}%</div>
+      </div>`).join('');
+    document.querySelectorAll('#ctas .abar').forEach(b => bindTip(b, b.dataset.tip));
+  }
+}
+
+// auto-load se já tem senha salva + refresh a cada 60s
+if (senha()) carregar();
+setInterval(() => { if ($('painel').style.display === 'block') carregar(); }, 60000);
+</script>
+</body>
+</html>
