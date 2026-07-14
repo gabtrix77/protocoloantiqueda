@@ -1,8 +1,21 @@
 // POST /api/track — recebe eventos do quiz e incrementa contadores no Redis (Upstash via Vercel Storage)
 // Não guarda nenhum dado pessoal: só contadores agregados por dia.
 
-const KV_URL = () => process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-const KV_TOKEN = () => process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+// Acha as credenciais do Redis mesmo se a integração criar com prefixo diferente
+function kvVar(kind) {
+  const env = process.env;
+  const direct = kind === 'url'
+    ? (env.KV_REST_API_URL || env.UPSTASH_REDIS_REST_URL)
+    : (env.KV_REST_API_TOKEN || env.UPSTASH_REDIS_REST_TOKEN);
+  if (direct) return direct;
+  const suffix = kind === 'url' ? 'REST_API_URL' : 'REST_API_TOKEN';
+  const alt = kind === 'url' ? 'REDIS_REST_URL' : 'REDIS_REST_TOKEN';
+  const key = Object.keys(env).find(k =>
+    !k.includes('READ_ONLY') && (k.endsWith(suffix) || k.endsWith(alt)));
+  return key ? env[key] : '';
+}
+const KV_URL = () => kvVar('url');
+const KV_TOKEN = () => kvVar('token');
 
 // tipos de evento aceitos
 const TYPES = new Set(['visit', 'step', 'ans', 'cta']);
